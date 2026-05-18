@@ -4,19 +4,52 @@ import Sidebar from './components/Sidebar';
 import JobCard from './components/JobCard';
 import JobDetails from './components/JobDetails';
 import ApplicationForm from './components/ApplicationForm';
-import { jobsData } from './data/jobsData';
 
 function App() {
-  const [jobs] = useState(jobsData);
-  const [filteredJobs, setFilteredJobs] = useState(jobsData);
+  const [jobs, setJobs] = useState([]);
+  const [filteredJobs, setFilteredJobs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedJob, setSelectedJob] = useState(null);
   const [bookmarkedJobs, setBookmarkedJobs] = useState([]);
   const [showApplication, setShowApplication] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState(['All']);
   
-  const categories = ['All', ...new Set(jobs.map(job => job.category))];
+  // Fetch jobs from backend API
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+  
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5050/api/jobs');
+      const data = await response.json();
+      
+      // Make sure data is an array
+      if (Array.isArray(data)) {
+        setJobs(data);
+        setFilteredJobs(data);
+        
+        // Extract unique categories
+        const uniqueCategories = ['All', ...new Set(data.map(job => job.category))];
+        setCategories(uniqueCategories);
+      } else {
+        console.error('Data is not an array:', data);
+        setJobs([]);
+        setFilteredJobs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      setJobs([]);
+      setFilteredJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Filter jobs when search or category changes
   useEffect(() => {
     let filtered = jobs;
     if (searchTerm) {
@@ -45,7 +78,34 @@ function App() {
     setShowApplication(false);
   };
 
-  // INLINE STYLES - These will DEFINITELY work
+  const handleApplicationSubmit = async (applicationData) => {
+    console.log('Sending to backend:', applicationData);
+    
+    try {
+      const response = await fetch('http://localhost:5050/api/applications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(applicationData)
+      });
+      
+      const data = await response.json();
+      console.log('Response:', data);
+      
+      if (data.success || response.ok) {
+        alert(`✅ Application submitted for ${selectedJob.title}!`);
+        setShowApplication(false);
+        setSelectedJob(null);
+      } else {
+        alert('Error: ' + (data.message || 'Something went wrong'));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error submitting application');
+    }
+  };
+
   const styles = {
     app: {
       minHeight: '100vh',
@@ -66,6 +126,17 @@ function App() {
       flex: 1,
     }
   };
+
+  if (loading) {
+    return (
+      <div style={styles.app}>
+        <Header />
+        <div style={{ textAlign: 'center', padding: '50px', color: 'white' }}>
+          <h2>Loading jobs...</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.app}>
@@ -96,9 +167,9 @@ function App() {
           ) : (
             filteredJobs.map(job => (
               <JobCard
-                key={job.id}
+                key={job._id || job.id}
                 job={job}
-                isBookmarked={bookmarkedJobs.includes(job.id)}
+                isBookmarked={bookmarkedJobs.includes(job._id || job.id)}
                 onBookmark={toggleBookmark}
                 onClick={() => handleJobClick(job)}
               />
@@ -119,11 +190,7 @@ function App() {
         <ApplicationForm
           job={selectedJob}
           onClose={() => setShowApplication(false)}
-          onSubmit={(formData) => {
-            alert(`Application submitted for ${selectedJob.title}!`);
-            setShowApplication(false);
-            setSelectedJob(null);
-          }}
+          onSubmit={handleApplicationSubmit}
         />
       )}
     </div>

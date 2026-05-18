@@ -2,88 +2,106 @@ import React, { useState } from 'react';
 
 const ApplicationForm = ({ job, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    fullName: '',
     email: '',
     phone: ''
+    // coverLetter removed
   });
+
+  const [errors, setErrors] = useState({});
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.fullName.trim()) newErrors.fullName = 'Name required';
+    if (!formData.email.trim()) newErrors.email = 'Email required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone required';
+    return newErrors;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Form submitted with data:', formData);
-    onSubmit(formData);
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    onSubmit({
+      jobId: job._id || job.id,
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone
+      // coverLetter removed
+    });
   };
 
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.8)',
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      zIndex: 2000
+      zIndex: 1000
     }} onClick={onClose}>
       <div style={{
         background: 'white',
         borderRadius: '12px',
         padding: '2rem',
         maxWidth: '500px',
-        width: '90%',
-        zIndex: 2001
+        width: '90%'
       }} onClick={(e) => e.stopPropagation()}>
         
         <h2>Apply for {job.title}</h2>
-        <p style={{ color: '#667eea', marginBottom: '1.5rem' }}>at {job.company}</p>
+        <p style={{ color: '#667eea' }}>at {job.company}</p>
         
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Full Name *</label>
+            <label>Full Name *</label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              required
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+            {errors.fullName && <p style={{ color: 'red', fontSize: '0.8rem' }}>{errors.fullName}</p>}
           </div>
           
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Email *</label>
+            <label>Email *</label>
             <input
               type="email"
+              name="email"
               value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              required
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              onChange={handleChange}
+              style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+            {errors.email && <p style={{ color: 'red', fontSize: '0.8rem' }}>{errors.email}</p>}
           </div>
           
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Phone *</label>
+          <div style={{ marginBottom: '1rem' }}>
+            <label>Phone *</label>
             <input
-              type="tel"
+              type="text"
+              name="phone"
               value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              required
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              onChange={handleChange}
+              style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+            {errors.phone && <p style={{ color: 'red', fontSize: '0.8rem' }}>{errors.phone}</p>}
           </div>
           
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button 
-              type="button" 
-              onClick={onClose}
-              style={{ flex: 1, padding: '0.75rem', background: '#f0f0f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '0.75rem', background: '#f0f0f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
               Cancel
             </button>
-            <button 
-              type="submit"
-              style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >
+            <button type="submit" style={{ flex: 1, padding: '0.75rem', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
               Submit Application
             </button>
           </div>
