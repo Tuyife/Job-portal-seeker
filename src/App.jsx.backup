@@ -1,0 +1,201 @@
+import { jobsData } from "./data/jobsData";
+import React, { useState, useEffect } from "react";
+import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
+import JobCard from "./components/JobCard";
+import JobDetails from "./components/JobDetails";
+import ApplicationForm from "./components/ApplicationForm";
+
+function App() {
+  const [jobs, setJobs] = useState([]);
+  const [filteredJobs, setFilteredJobs] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [bookmarkedJobs, setBookmarkedJobs] = useState([]);
+  const [showApplication, setShowApplication] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState(["All"]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    setJobs(jobsData);
+    setFilteredJobs(jobsData);
+    const uniqueCategories = [
+      "All",
+      ...new Set(jobsData.map((job) => job.category)),
+    ];
+    setCategories(uniqueCategories);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    let filtered = jobs;
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (job) =>
+          job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          job.location.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
+    }
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter((job) => job.category === selectedCategory);
+    }
+    setFilteredJobs(filtered);
+  }, [searchTerm, selectedCategory, jobs]);
+
+  const toggleBookmark = (jobId) => {
+    if (bookmarkedJobs.includes(jobId)) {
+      setBookmarkedJobs(bookmarkedJobs.filter((id) => id !== jobId));
+    } else {
+      setBookmarkedJobs([...bookmarkedJobs, jobId]);
+    }
+  };
+
+  const handleJobClick = (job) => {
+    setSelectedJob(job);
+    setShowApplication(false);
+  };
+
+  const handleApplicationSubmit = async (applicationData) => {
+    console.log("Sending to backend:", applicationData);
+
+    try {
+      const response = await fetch("http://localhost:5050/api/applications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(applicationData),
+      });
+
+      const data = await response.json();
+      console.log("Response:", data);
+
+      if (data.success || response.ok) {
+        alert(`✅ Application submitted for ${selectedJob.title}!`);
+        setShowApplication(false);
+        setSelectedJob(null);
+      } else {
+        alert("Error: " + (data.message || "Something went wrong"));
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error submitting application");
+    }
+  };
+
+  const styles = {
+    app: {
+      minHeight: "100vh",
+    },
+    mainContainer: {
+      display: "flex",
+      flexDirection: "row",
+      gap: "20px",
+      padding: "20px",
+      maxWidth: "1400px",
+      margin: "0 auto",
+    },
+    sidebarWrapper: {
+      width: "250px",
+      flexShrink: 0,
+    },
+    contentWrapper: {
+      flex: 1,
+    },
+  };
+
+  if (loading) {
+    return (
+      <div style={styles.app}>
+        <Header />
+        <div style={{ textAlign: "center", padding: "50px", color: "white" }}>
+          <h2>Loading jobs...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.app}>
+      <Header />
+      <div style={styles.mainContainer}>
+        <div style={styles.sidebarWrapper}>
+          <Sidebar
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            categories={categories}
+            bookmarkedJobs={bookmarkedJobs}
+            jobs={jobs}
+            onJobClick={handleJobClick}
+          />
+        </div>
+
+        <div style={styles.contentWrapper}>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.2)",
+              color: "white",
+              padding: "8px 16px",
+              borderRadius: "8px",
+              marginBottom: "16px",
+              display: "inline-block",
+            }}
+          >
+            Found {filteredJobs.length} job
+            {filteredJobs.length !== 1 ? "s" : ""}
+          </div>
+
+          {filteredJobs.length === 0 ? (
+            <div
+              style={{
+                background: "white",
+                borderRadius: "12px",
+                padding: "40px",
+                textAlign: "center",
+              }}
+            >
+              <p>No jobs found matching your search.</p>
+            </div>
+          ) : (
+            filteredJobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                isBookmarked={bookmarkedJobs.includes(job.id)}
+                onBookmark={toggleBookmark}
+                onClick={() => handleJobClick(job)}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {selectedJob && !showApplication && (
+        <JobDetails
+          job={selectedJob}
+          onClose={() => setSelectedJob(null)}
+          onApply={() => setShowApplication(true)}
+        />
+      )}
+
+      {showApplication && selectedJob && (
+        <ApplicationForm
+          job={selectedJob}
+          onClose={() => setShowApplication(false)}
+          onSubmit={handleApplicationSubmit}
+        />
+      )}
+    </div>
+  );
+}
+
+export default App;
